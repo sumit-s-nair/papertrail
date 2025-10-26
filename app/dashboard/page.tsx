@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useUser } from "@stackframe/stack";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -23,14 +24,21 @@ export default function DashboardPage() {
   const utils = trpc.useUtils();
   const deletePost = trpc.post.delete.useMutation({
     onSuccess: () => {
+      toast.success("Post deleted successfully!");
       utils.post.getAll.invalidate();
+    },
+    onError: () => {
+      toast.error("Failed to delete post. Please try again.");
     },
   });
 
   const handleDelete = async (id: string, title: string) => {
-    if (confirm(`Are you sure you want to delete "${title}"?`)) {
-      await deletePost.mutateAsync({ id });
-    }
+    toast.error(`Delete "${title}"? This cannot be undone.`, {
+      action: {
+        label: "Delete",
+        onClick: () => deletePost.mutate({ id }),
+      },
+    });
   };
 
   // Transform data to include categories

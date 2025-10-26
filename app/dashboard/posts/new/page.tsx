@@ -60,10 +60,15 @@ export default function NewPostPage() {
       return;
     }
 
-    const slug = title
+    // Generate base slug from title
+    const baseSlug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
+    
+    // Add random characters to ensure uniqueness
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const slug = `${baseSlug}-${randomSuffix}`;
 
     // Map selected category names to category IDs
     const categoryIds = categories

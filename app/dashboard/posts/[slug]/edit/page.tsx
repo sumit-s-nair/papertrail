@@ -122,19 +122,18 @@ export default function EditPostPage({
   };
 
   const handlePublish = async () => {
-    if (confirm("Are you sure you want to publish this post? It will be visible to everyone.")) {
-      toast.promise(
-        new Promise((resolve) => {
-          handleSave(true);
-          resolve(true);
-        }),
-        {
-          loading: "Publishing post...",
-          success: "Post published successfully!",
-          error: "Failed to publish post",
-        }
-      );
-    }
+    // Directly publish with toast feedback
+    toast.promise(
+      new Promise((resolve) => {
+        handleSave(true);
+        resolve(true);
+      }),
+      {
+        loading: "Publishing post...",
+        success: "Post published successfully!",
+        error: "Failed to publish post",
+      }
+    );
   };
 
   const handleDelete = async () => {
@@ -143,9 +142,13 @@ export default function EditPostPage({
       return;
     }
 
-    if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
-      deletePost.mutate({ id: postId });
-    }
+    // Show warning toast with action
+    toast.error("Are you sure? This action cannot be undone.", {
+      action: {
+        label: "Delete",
+        onClick: () => deletePost.mutate({ id: postId }),
+      },
+    });
   };
 
   if (postLoading) {

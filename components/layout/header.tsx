@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { FileText, Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -39,6 +40,7 @@ export function Header() {
 
         {/* CTA Button */}
         <div className="hidden md:flex items-center space-x-3">
+          <ThemeToggle />
           <Link href="/dashboard">
             <Button>Dashboard</Button>
           </Link>
@@ -82,9 +84,12 @@ export function Header() {
                 Software
               </Button>
             </Link>
-            <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
-              <Button className="w-full">Dashboard</Button>
-            </Link>
+            <div className="flex items-center gap-2 pt-2">
+              <ThemeToggle />
+              <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                <Button className="w-full">Dashboard</Button>
+              </Link>
+            </div>
           </nav>
         </div>
       )}
