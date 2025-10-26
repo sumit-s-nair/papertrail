@@ -1,29 +1,88 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import { use } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { mockPosts } from "@/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, ArrowLeft, Share2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { trpc } from "@/lib/trpc/client";
+import { toast } from "sonner";
 
-export async function generateStaticParams() {
-  return mockPosts.map((post) => ({
-    slug: post.slug,
-  }));
-}
-
-export default async function BlogPostPage({
+export default function BlogPostPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  const post = mockPosts.find((p) => p.slug === slug);
+  const { slug } = use(params);
+  const router = useRouter();
 
-  if (!post) {
-    notFound();
+  const { data: post, isLoading, error } = trpc.post.getBySlug.useQuery({ slug });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
+
+  if (error || !post) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold">Post not found</h1>
+          <Link href="/blog">
+            <Button>Back to Blog</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!post.published) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <h1 className="text-2xl font-bold">This post is not published yet</h1>
+          <Link href="/blog">
+            <Button>Back to Blog</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const categories = post.postCategories.map((pc) => pc.category.name);
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    const title = post.title;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          url,
+        });
+      } catch (err) {
+        console.log("Error sharing:", err);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied to clipboard!");
+      } catch (err) {
+        console.error("Failed to copy:", err);
+        toast.error("Failed to copy link");
+      }
+    }
+  };
 
   return (
     <article className="py-12 md:py-16">
@@ -39,7 +98,7 @@ export default async function BlogPostPage({
         {/* Post Header */}
         <header className="mb-8 space-y-6">
           <div className="flex flex-wrap gap-2">
-            {post.categories.map((category) => (
+            {categories.map((category) => (
               <Badge key={category} variant="secondary">
                 {category}
               </Badge>
@@ -57,17 +116,21 @@ export default async function BlogPostPage({
             <Separator orientation="vertical" className="h-4" />
             <div className="flex items-center space-x-1">
               <Calendar className="h-4 w-4" />
-              <span>{post.date}</span>
+              <span>{new Date(post.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="h-4 w-4" />
-              <span>{post.readTime}</span>
+              <span>5 min read</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between pt-4">
             <div className="flex gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleShare}>
                 <Share2 className="mr-2 h-4 w-4" />
                 Share
               </Button>
@@ -76,43 +139,25 @@ export default async function BlogPostPage({
         </header>
 
         {/* Featured Image */}
-        <div className="mb-12 rounded-xl overflow-hidden">
-          <Image
-            src={post.imageUrl}
-            alt={post.title}
-            width={1200}
-            height={600}
-            className="w-full h-auto"
-            priority
-          />
-        </div>
+        {post.imageUrl && (
+          <div className="mb-12 rounded-xl overflow-hidden">
+            <Image
+              src={post.imageUrl}
+              alt={post.title}
+              width={1200}
+              height={600}
+              className="w-full h-auto"
+              priority
+              unoptimized // Allow any external image source
+            />
+          </div>
+        )}
 
         {/* Post Content */}
         <div className="prose prose-lg dark:prose-invert max-w-none">
-          <p>
-            This is where the full blog post content would go. In a real application, 
-            you would fetch the full markdown or rich text content from your database 
-            and render it here.
-          </p>
-          
-          <h2>Introduction</h2>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod 
-            tempor incididunt ut labore et dolore magna aliqua.
-          </p>
-
-          <h2>Key Takeaways</h2>
-          <ul>
-            <li>First important point about the topic</li>
-            <li>Second crucial insight to remember</li>
-            <li>Third actionable recommendation</li>
-          </ul>
-
-          <h2>Conclusion</h2>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. In a real implementation, 
-            you would use a markdown parser to render the actual content.
-          </p>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {post.content}
+          </ReactMarkdown>
         </div>
 
         <Separator className="my-12" />

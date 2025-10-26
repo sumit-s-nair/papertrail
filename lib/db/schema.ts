@@ -22,7 +22,8 @@ export const posts = pgTable("posts", {
   content: text("content"),
   imageUrl: text("image_url"),
   published: boolean("published").notNull().default(false),
-  authorId: text("author_id").notNull(), // References Neon Auth user
+  authorId: text("author_id").notNull(), // References Stack Auth user
+  author: text("author").notNull().default("Admin"), // Author display name
   readTime: integer("read_time"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { StackProvider, StackTheme } from "@stackframe/stack";
 import { stackClientApp } from "../stack/client";
+import { TRPCProvider } from "@/components/providers/trpc-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -25,15 +28,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StackProvider app={stackClientApp}>
-          <StackTheme>
-            {children}
-          </StackTheme>
-        </StackProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TRPCProvider>
+            <StackProvider app={stackClientApp}>
+              <StackTheme>
+                {children}
+                <Toaster />
+              </StackTheme>
+            </StackProvider>
+          </TRPCProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
