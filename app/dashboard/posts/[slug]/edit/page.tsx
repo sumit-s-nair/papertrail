@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Eye, X, Trash2, FileEdit, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { categories, mockPosts } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc/client";
+import { toast } from "sonner";
 
 type TabType = "write" | "preview";
 
@@ -24,32 +25,65 @@ export default function EditPostPage({
 }) {
   const router = useRouter();
   const [slug, setSlug] = useState<string>("");
+  const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [published, setPublished] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("write");
+
+  const { data: categories = [], isLoading: categoriesLoading } = trpc.category.getAll.useQuery();
+  
+  const { data: post, isLoading: postLoading } = trpc.post.getBySlug.useQuery(
+    { slug },
+    { enabled: !!slug }
+  );
+
+  const updatePost = trpc.post.update.useMutation({
+    onSuccess: () => {
+      toast.success(published ? "Post updated successfully!" : "Draft saved successfully!");
+      router.push("/dashboard");
+    },
+    onError: (error: any) => {
+      console.error("Failed to update post:", error);
+      toast.error("Failed to update post. Please try again.");
+    },
+  });
+
+  const deletePost = trpc.post.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Post deleted successfully!");
+      router.push("/dashboard");
+    },
+    onError: (error: any) => {
+      console.error("Failed to delete post:", error);
+      toast.error("Failed to delete post. Please try again.");
+    },
+  });
 
   useEffect(() => {
     params.then((resolvedParams) => {
       setSlug(resolvedParams.slug);
-      // Load existing post data
-      const post = mockPosts.find((p) => p.slug === resolvedParams.slug);
-      if (post) {
-        setTitle(post.title);
-        setDescription(post.description);
-        setSelectedCategories(post.categories);
-        setImageUrl(post.imageUrl);
-        setContent("## " + post.title + "\n\n" + post.description);
-        setLoading(false);
-      } else {
-        notFound();
-      }
     });
   }, [params]);
+
+  // Populate form when post data is loaded
+  useEffect(() => {
+    if (post) {
+      setPostId(post.id);
+      setTitle(post.title);
+      setDescription(post.description || "");
+      setContent(post.content || "");
+      setImageUrl(post.imageUrl || "");
+      setPublished(post.published);
+      
+      // Set selected categories
+      const categoryNames = post.postCategories.map((pc) => pc.category.name);
+      setSelectedCategories(categoryNames);
+    }
+  }, [post]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -59,47 +93,105 @@ export default function EditPostPage({
     );
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    // TODO: Implement actual save to database
-    setTimeout(() => {
-      setSaving(false);
-      router.push("/dashboard");
-    }, 1000);
+  const handleSave = async (shouldPublish?: boolean) => {
+    if (!postId) {
+      toast.error("Post not found");
+      return;
+    }
+
+    if (!title.trim()) {
+      toast.error("Please enter a title");
+      return;
+    }
+
+    // Map selected category names to category IDs
+    const categoryIds = categories
+      .filter((cat) => selectedCategories.includes(cat.name))
+      .map((cat) => cat.id);
+
+    updatePost.mutate({
+      id: postId,
+      title,
+      slug,
+      description,
+      content,
+      imageUrl: imageUrl || undefined,
+      published: shouldPublish !== undefined ? shouldPublish : published,
+      categoryIds,
+    });
   };
 
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this post?")) {
-      // TODO: Implement actual delete from database
-      router.push("/dashboard");
+  const handlePublish = async () => {
+    if (confirm("Are you sure you want to publish this post? It will be visible to everyone.")) {
+      toast.promise(
+        new Promise((resolve) => {
+          handleSave(true);
+          resolve(true);
+        }),
+        {
+          loading: "Publishing post...",
+          success: "Post published successfully!",
+          error: "Failed to publish post",
+        }
+      );
     }
   };
 
-  if (loading) {
+  const handleDelete = async () => {
+    if (!postId) {
+      toast.error("Post not found");
+      return;
+    }
+
+    if (confirm("Are you sure you want to delete this post? This action cannot be undone.")) {
+      deletePost.mutate({ id: postId });
+    }
+  };
+
+  if (postLoading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>;
+  }
+
+  if (!post) {
+    return <div className="flex items-center justify-center h-64">Post not found</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </Link>
-        <div className="flex gap-2">
-          <Link href={`/blog/${slug}`} target="_blank">
-            <Button variant="outline" size="sm">
-              <Eye className="mr-2 h-4 w-4" />
-              Preview
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
             </Button>
           </Link>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          {!published && (
+            <Badge variant="secondary" className="text-sm">
+              Editing Draft
+            </Badge>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            size="sm" 
+            onClick={() => handleSave(undefined)} 
+            disabled={updatePost.isPending}
+          >
             <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save Changes"}
+            {updatePost.isPending ? "Saving..." : published ? "Save Changes" : "Save Draft"}
           </Button>
+          {!published && (
+            <Button 
+              size="sm" 
+              onClick={handlePublish} 
+              disabled={updatePost.isPending}
+            >
+              {updatePost.isPending ? "Publishing..." : "Publish"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -147,18 +239,7 @@ export default function EditPostPage({
 
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle>Content</CardTitle>
-                <Link
-                  href={`/blog/${slug}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  View live post
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
-              </div>
+              <CardTitle>Content</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {/* GitHub-style tabs */}
@@ -218,19 +299,23 @@ export default function EditPostPage({
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <Badge
-                    key={category}
-                    variant={selectedCategories.includes(category) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleCategory(category)}
-                  >
-                    {category}
-                    {selectedCategories.includes(category) && (
-                      <X className="ml-1 h-3 w-3" />
-                    )}
-                  </Badge>
-                ))}
+                {categoriesLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading categories...</p>
+                ) : (
+                  categories.map((category) => (
+                    <Badge
+                      key={category.id}
+                      variant={selectedCategories.includes(category.name) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => toggleCategory(category.name)}
+                    >
+                      {category.name}
+                      {selectedCategories.includes(category.name) && (
+                        <X className="ml-1 h-3 w-3" />
+                      )}
+                    </Badge>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -242,19 +327,51 @@ export default function EditPostPage({
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Status</Label>
-                <p className="text-sm text-muted-foreground">Published</p>
+                <p className="text-sm text-muted-foreground">
+                  {published ? "Published" : "Draft"}
+                </p>
               </div>
-              <Button className="w-full" onClick={handleSave} disabled={saving}>
+              {published && (
+                <div className="space-y-2">
+                  <Label>Live Post</Label>
+                  <Link
+                    href={`/blog/${slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm" className="w-full">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Live Post
+                    </Button>
+                  </Link>
+                </div>
+              )}
+              <Button 
+                variant="outline"
+                className="w-full" 
+                onClick={() => handleSave(undefined)} 
+                disabled={updatePost.isPending}
+              >
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : "Update Post"}
+                {updatePost.isPending ? "Saving..." : published ? "Save Changes" : "Save Draft"}
               </Button>
+              {!published && (
+                <Button 
+                  className="w-full" 
+                  onClick={handlePublish} 
+                  disabled={updatePost.isPending}
+                >
+                  {updatePost.isPending ? "Publishing..." : "Publish Post"}
+                </Button>
+              )}
               <Button 
                 variant="destructive" 
                 className="w-full" 
                 onClick={handleDelete}
+                disabled={deletePost.isPending}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete Post
+                {deletePost.isPending ? "Deleting..." : "Delete Post"}
               </Button>
             </CardContent>
           </Card>

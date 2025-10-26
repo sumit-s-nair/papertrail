@@ -12,19 +12,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, X, FileEdit, Eye } from "lucide-react";
 import Link from "next/link";
-import { categories } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc/client";
+import { useUser } from "@stackframe/stack";
+import { toast } from "sonner";
 
 type TabType = "write" | "preview";
 
 export default function NewPostPage() {
   const router = useRouter();
+  const user = useUser();
+  const { data: categories = [], isLoading: categoriesLoading } = trpc.category.getAll.useQuery();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("## Your content here\n\nStart writing your blog post...");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [imageUrl, setImageUrl] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [published, setPublished] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("write");
+
+  const createPost = trpc.post.create.useMutation({
+    onSuccess: () => {
+      toast.success("Post created successfully!");
+      router.push("/dashboard");
+    },
+    onError: (error: any) => {
+      console.error("Failed to create post:", error);
+      toast.error("Failed to create post. Please try again.");
+    },
+  });
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -34,13 +49,38 @@ export default function NewPostPage() {
     );
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    // TODO: Implement actual save to database
-    setTimeout(() => {
-      setSaving(false);
-      router.push("/dashboard");
-    }, 1000);
+  const handleSave = async (shouldPublish: boolean) => {
+    if (!title.trim()) {
+      toast.error("Please enter a title");
+      return;
+    }
+    
+    if (!user) {
+      toast.error("You must be logged in to create a post");
+      return;
+    }
+
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    // Map selected category names to category IDs
+    const categoryIds = categories
+      .filter((cat) => selectedCategories.includes(cat.name))
+      .map((cat) => cat.id);
+
+    createPost.mutate({
+      title,
+      slug,
+      description,
+      content,
+      imageUrl: imageUrl || undefined,
+      published: shouldPublish,
+      categoryIds,
+      authorId: user.id,
+      author: user.displayName || user.primaryEmail || "Anonymous",
+    });
   };
 
   return (
@@ -54,9 +94,22 @@ export default function NewPostPage() {
           </Button>
         </Link>
         <div className="flex gap-2">
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleSave(false)} 
+            disabled={createPost.isPending}
+          >
             <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save Post"}
+            {createPost.isPending ? "Saving..." : "Save Draft"}
+          </Button>
+          <Button 
+            size="sm" 
+            onClick={() => handleSave(true)} 
+            disabled={createPost.isPending}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {createPost.isPending ? "Publishing..." : "Publish"}
           </Button>
         </div>
       </div>
@@ -165,19 +218,23 @@ export default function NewPostPage() {
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <Badge
-                    key={category}
-                    variant={selectedCategories.includes(category) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleCategory(category)}
-                  >
-                    {category}
-                    {selectedCategories.includes(category) && (
-                      <X className="ml-1 h-3 w-3" />
-                    )}
-                  </Badge>
-                ))}
+                {categoriesLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading categories...</p>
+                ) : (
+                  categories.map((category) => (
+                    <Badge
+                      key={category.id}
+                      variant={selectedCategories.includes(category.name) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => toggleCategory(category.name)}
+                    >
+                      {category.name}
+                      {selectedCategories.includes(category.name) && (
+                        <X className="ml-1 h-3 w-3" />
+                      )}
+                    </Badge>
+                  ))
+                )}
               </div>
               {selectedCategories.length === 0 && (
                 <p className="text-sm text-muted-foreground mt-2">
@@ -194,15 +251,32 @@ export default function NewPostPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Status</Label>
-                <p className="text-sm text-muted-foreground">Draft</p>
+                <p className="text-sm text-muted-foreground">
+                  {published ? "Published" : "Draft"}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Author</Label>
-                <p className="text-sm text-muted-foreground">You</p>
+                <p className="text-sm text-muted-foreground">
+                  {user?.primaryEmail || "You"}
+                </p>
               </div>
-              <Button className="w-full" onClick={handleSave} disabled={saving}>
+              <Button 
+                variant="outline"
+                className="w-full" 
+                onClick={() => handleSave(false)} 
+                disabled={createPost.isPending}
+              >
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? "Publishing..." : "Publish Post"}
+                {createPost.isPending ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button 
+                className="w-full" 
+                onClick={() => handleSave(true)} 
+                disabled={createPost.isPending}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {createPost.isPending ? "Publishing..." : "Publish Post"}
               </Button>
             </CardContent>
           </Card>

@@ -7,17 +7,56 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
-import { mockPosts } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc/client";
+import { useUser } from "@stackframe/stack";
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const user = useUser({ or: "redirect" });
+  
+  // Get only the current user's posts
+  const { data: postsData = [], isLoading } = trpc.post.getAll.useQuery({
+    userId: user.id,
+    publishedOnly: false,
+  });
+  
+  const utils = trpc.useUtils();
+  const deletePost = trpc.post.delete.useMutation({
+    onSuccess: () => {
+      utils.post.getAll.invalidate();
+    },
+  });
+
+  const handleDelete = async (id: string, title: string) => {
+    if (confirm(`Are you sure you want to delete "${title}"?`)) {
+      await deletePost.mutateAsync({ id });
+    }
+  };
+
+  // Transform data to include categories
+  const posts = postsData.map(post => ({
+    ...post,
+    categories: post.postCategories.map(pc => pc.category.name),
+  }));
 
   // Filter posts based on search
-  const filteredPosts = mockPosts.filter(
+  const filteredPosts = posts.filter(
     (post) =>
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (post.description && post.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const totalPosts = posts.length;
+  const publishedPosts = posts.filter((p) => p.published).length;
+  const draftPosts = totalPosts - publishedPosts;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Loading posts...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -53,19 +92,19 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Total Posts</CardDescription>
-            <CardTitle className="text-4xl">{mockPosts.length}</CardTitle>
+            <CardTitle className="text-4xl">{totalPosts}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Published</CardDescription>
-            <CardTitle className="text-4xl">{mockPosts.length}</CardTitle>
+            <CardTitle className="text-4xl">{publishedPosts}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-3">
             <CardDescription>Drafts</CardDescription>
-            <CardTitle className="text-4xl">0</CardTitle>
+            <CardTitle className="text-4xl">{draftPosts}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -86,7 +125,7 @@ export default function DashboardPage() {
           </Card>
         ) : (
           filteredPosts.map((post) => (
-            <Card key={post.slug}>
+            <Card key={post.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
@@ -115,7 +154,13 @@ export default function DashboardPage() {
                         Edit
                       </Button>
                     </Link>
-                    <Button variant="outline" size="sm" className="text-destructive">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-destructive"
+                      onClick={() => handleDelete(post.id, post.title)}
+                      disabled={deletePost.isPending}
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </Button>
@@ -123,11 +168,13 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardFooter className="text-sm text-muted-foreground">
-                <span>{post.date}</span>
-                <span className="mx-2">•</span>
-                <span>{post.readTime}</span>
+                <span>{new Date(post.createdAt).toLocaleDateString()}</span>
                 <span className="mx-2">•</span>
                 <span>By {post.author}</span>
+                <span className="mx-2">•</span>
+                <Badge variant={post.published ? "default" : "secondary"}>
+                  {post.published ? "Published" : "Draft"}
+                </Badge>
               </CardFooter>
             </Card>
           ))

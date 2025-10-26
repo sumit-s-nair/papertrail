@@ -3,10 +3,18 @@ import Image from "next/image";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
-import { BlogPost } from "@/lib/mock-data";
 
 interface BlogCardProps {
-  post: BlogPost;
+  post: {
+    id: string;
+    title: string;
+    slug: string;
+    description: string;
+    imageUrl: string;
+    author: string;
+    createdAt: Date;
+    categories: string[];
+  };
   featured?: boolean;
 }
 
@@ -23,6 +31,7 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
             width={800}
             height={featured ? 500 : 400}
             className="w-full h-48 md:h-56 object-cover transition-transform duration-300 group-hover:scale-105"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
@@ -55,11 +64,11 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1">
               <Calendar className="h-4 w-4" />
-              <span>{post.date}</span>
+              <span>{new Date(post.createdAt).toLocaleDateString()}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="h-4 w-4" />
-              <span>{post.readTime}</span>
+              <span>5 min read</span>
             </div>
           </div>
           <span className="font-medium text-foreground">{post.author}</span>

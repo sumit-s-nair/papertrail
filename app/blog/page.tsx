@@ -1,28 +1,59 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { BlogCard } from "@/components/blog/blog-card";
 import { CategoryFilter } from "@/components/blog/category-filter";
-import { mockPosts } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc/client";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
-export default function BlogPage() {
+function BlogContent() {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+  
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: postsData = [], isLoading } = trpc.post.getAll.useQuery();
+
+  // Update selected category when query param changes
+  useEffect(() => {
+    if (categoryParam) {
+      // Capitalize first letter to match category names
+      const formattedCategory = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+      setSelectedCategory(formattedCategory);
+    } else {
+      setSelectedCategory("All");
+    }
+  }, [categoryParam]);
+
+  // Transform data to include categories as string array
+  const posts = postsData.map(post => ({
+    ...post,
+    categories: post.postCategories.map(pc => pc.category.name),
+  }));
+
   const filteredPosts = useMemo(() => {
-    return mockPosts.filter((post) => {
+    return posts.filter((post) => {
       const matchesCategory =
         selectedCategory === "All" ||
         post.categories.includes(selectedCategory);
       const matchesSearch =
         searchQuery === "" ||
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.description.toLowerCase().includes(searchQuery.toLowerCase());
+        (post.description && post.description.toLowerCase().includes(searchQuery.toLowerCase()));
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [posts, selectedCategory, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Loading posts...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -80,7 +111,11 @@ export default function BlogPage() {
               {filteredPosts.map((post, index) => (
                 <BlogCard
                   key={post.id}
-                  post={post}
+                  post={{
+                    ...post,
+                    description: post.description || "",
+                    imageUrl: post.imageUrl || "/placeholder.jpg",
+                  }}
                   featured={index === 0 && selectedCategory === "All"}
                 />
               ))}
@@ -95,5 +130,17 @@ export default function BlogPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    }>
+      <BlogContent />
+    </Suspense>
   );
 }
