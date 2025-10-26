@@ -17,7 +17,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              A modern blogging platform for sharing ideas, stories, and insights with the world.
+              A modern blogging platform for sharing ideas, stories, and
+              insights with the world.
             </p>
             <div className="flex space-x-4">
               <a
@@ -69,72 +70,10 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#"
+                  href="/"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Features
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  API Reference
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Community
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="font-semibold mb-4">Company</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Privacy
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="#"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Terms
                 </Link>
               </li>
             </ul>
@@ -143,7 +82,8 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>
-            © {new Date().getFullYear()} PaperTrail. Built with Next.js, tRPC, and Drizzle ORM.
+            © {new Date().getFullYear()} PaperTrail. Built with Next.js, tRPC,
+            and Drizzle ORM.
           </p>
         </div>
       </div>
