@@ -9,7 +9,6 @@ A modern, full-stack blogging platform built with Next.js 15, tRPC, PostgreSQL, 
 ## Features Implemented
 
 - Blog post CRUD operations (create, read, update, delete)
-- Category CRUD operations
 - Assign multiple categories to posts (many-to-many relationship)
 - Blog listing page with all posts
 - Individual post view pages
@@ -189,12 +188,12 @@ All procedures use Zod schemas for input validation and leverage tRPC's automati
 ## Key Design Decisions
 
 ### 1. Markdown over Rich Text Editor
-- **Reason:** Faster to implement (saved 2-3 hours)
+- **Reason:** Faster to implement
 - **Benefit:** Better for technical content, no complex WYSIWYG logic
 - **Implementation:** react-markdown with GitHub Flavored Markdown
 
 ### 2. shadcn/ui Component Library
-- **Reason:** Pre-built, accessible components (saved 3-4 hours)
+- **Reason:** Pre-built, accessible components
 - **Benefit:** Consistent design system, easy customization
 - **Trade-off:** Additional dependencies, but worth the time savings
 
