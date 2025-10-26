@@ -4,7 +4,7 @@ A modern, full-stack blogging platform built with Next.js 15, tRPC, PostgreSQL, 
 
 ## Live Demo
 
-[View Live Site](https://papertrail-sumit.vercel.app)
+[View Live Site](https://papertrail-chi.vercel.app/)
 
 ## Features Implemented
 
