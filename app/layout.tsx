@@ -18,8 +18,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PaperTrail - Multi-User Blogging Platform",
-  description: "Create, edit, and manage blog posts with category management",
+  title: {
+    default: "Papertrail - Multi-User Blogging Platform",
+    template: "%s | Papertrail"
+  },
+  description: "Create, edit, and manage blog posts with category management. A modern blogging platform built with Next.js, tRPC, and PostgreSQL.",
+  keywords: ["blog", "blogging platform", "Next.js", "tRPC", "PostgreSQL", "markdown", "content management"],
+  authors: [{ name: "Sumit S Nair" }],
+  creator: "Sumit S Nair",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://papertrail-chi.vercel.app",
+    title: "Papertrail - Multi-User Blogging Platform",
+    description: "Create, edit, and manage blog posts with category management",
+    siteName: "Papertrail",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Papertrail - Multi-User Blogging Platform",
+    description: "Create, edit, and manage blog posts with category management",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 export default function RootLayout({
