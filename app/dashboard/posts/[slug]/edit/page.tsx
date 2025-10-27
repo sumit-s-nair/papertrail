@@ -33,6 +33,7 @@ export default function EditPostPage({
   const [imageUrl, setImageUrl] = useState("");
   const [published, setPublished] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("write");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const { data: categories = [], isLoading: categoriesLoading } = trpc.category.getAll.useQuery();
   
@@ -48,7 +49,17 @@ export default function EditPostPage({
     },
     onError: (error: any) => {
       console.error("Failed to update post:", error);
-      toast.error("Failed to update post. Please try again.");
+      
+      // Provide specific error messages
+      if (error.message?.includes("slug")) {
+        toast.error("A post with this title already exists. Please use a different title.");
+      } else if (error.message?.includes("Unauthorized") || error.message?.includes("auth")) {
+        toast.error("You are not authorized to update this post.");
+      } else if (error.message?.includes("not found")) {
+        toast.error("Post not found. It may have been deleted.");
+      } else {
+        toast.error(error.message || "Failed to update post. Please try again.");
+      }
     },
   });
 
@@ -59,7 +70,14 @@ export default function EditPostPage({
     },
     onError: (error: any) => {
       console.error("Failed to delete post:", error);
-      toast.error("Failed to delete post. Please try again.");
+      
+      if (error.message?.includes("Unauthorized") || error.message?.includes("auth")) {
+        toast.error("You are not authorized to delete this post.");
+      } else if (error.message?.includes("not found")) {
+        toast.error("Post not found. It may have already been deleted.");
+      } else {
+        toast.error(error.message || "Failed to delete post. Please try again.");
+      }
     },
   });
 
@@ -69,9 +87,9 @@ export default function EditPostPage({
     });
   }, [params]);
 
-  // Populate form when post data is loaded
+  // Populate form when post data is loaded (only once)
   useEffect(() => {
-    if (post) {
+    if (post && !isInitialized) {
       setPostId(post.id);
       setTitle(post.title);
       setDescription(post.description || "");
@@ -82,8 +100,9 @@ export default function EditPostPage({
       // Set selected categories
       const categoryNames = post.postCategories.map((pc) => pc.category.name);
       setSelectedCategories(categoryNames);
+      setIsInitialized(true);
     }
-  }, [post]);
+  }, [post, isInitialized]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -99,8 +118,29 @@ export default function EditPostPage({
       return;
     }
 
+    // Validation
     if (!title.trim()) {
-      toast.error("Please enter a title");
+      toast.error("Title is required");
+      return;
+    }
+
+    if (title.length > 200) {
+      toast.error("Title is too long (max 200 characters)");
+      return;
+    }
+
+    if (description && description.length > 500) {
+      toast.error("Description is too long (max 500 characters)");
+      return;
+    }
+
+    if (imageUrl && !imageUrl.match(/^https?:\/\/.+/)) {
+      toast.error("Image URL must be a valid HTTP or HTTPS URL");
+      return;
+    }
+
+    if (selectedCategories.length === 0) {
+      toast.error("Please select at least one category");
       return;
     }
 

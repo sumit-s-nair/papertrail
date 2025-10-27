@@ -15,7 +15,7 @@ function BlogContent() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: postsData = [], isLoading } = trpc.post.getAll.useQuery();
+  const { data: postsData = [], isLoading, error } = trpc.post.getAll.useQuery();
 
   // Update selected category when query param changes
   useEffect(() => {
@@ -50,7 +50,32 @@ function BlogContent() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading posts...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-pulse space-y-3">
+            <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+          </div>
+          <p className="text-muted-foreground">Loading posts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center space-y-4 max-w-md mx-auto px-4">
+          <h1 className="text-2xl font-bold text-destructive">Error Loading Posts</h1>
+          <p className="text-muted-foreground">
+            {error.message || "We couldn't load the blog posts. Please try again later."}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }

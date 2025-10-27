@@ -80,49 +80,80 @@ export const postRouter = router({
   create: publicProcedure
     .input(
       z.object({
-        title: z.string().min(1).max(200),
-        slug: z.string().min(1),
-        content: z.string().min(1),
-        description: z.string().max(500).optional(),
-        imageUrl: z.string().url().optional().or(z.literal("")),
+        title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+        slug: z.string().min(1, "Slug is required"),
+        content: z.string().min(1, "Content is required"),
+        description: z.string().max(500, "Description is too long").optional(),
+        imageUrl: z.string().url("Invalid image URL").optional().or(z.literal("")),
         published: z.boolean().default(false),
-        authorId: z.string(),
+        authorId: z.string().min(1, "Author ID is required"),
         author: z.string().default("Admin"),
-        categoryIds: z.array(z.string()).optional(),
+        categoryIds: z.array(z.string()).min(1, "At least one category is required").optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const { categoryIds, ...postData } = input;
 
-      // Insert post
-      const [newPost] = await ctx.db
-        .insert(posts)
-        .values(postData)
-        .returning();
+      try {
+        // Check for duplicate slug
+        const existingPost = await ctx.db.query.posts.findFirst({
+          where: eq(posts.slug, input.slug),
+        });
 
-      // Link categories if provided
-      if (categoryIds && categoryIds.length > 0) {
-        await ctx.db.insert(postCategories).values(
-          categoryIds.map((categoryId) => ({
-            postId: newPost.id,
-            categoryId,
-          }))
-        );
+        if (existingPost) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A post with this slug already exists",
+          });
+        }
+
+        // Insert post
+        const [newPost] = await ctx.db
+          .insert(posts)
+          .values(postData)
+          .returning();
+
+        // Link categories if provided
+        if (categoryIds && categoryIds.length > 0) {
+          await ctx.db.insert(postCategories).values(
+            categoryIds.map((categoryId) => ({
+              postId: newPost.id,
+              categoryId,
+            }))
+          );
+        }
+
+        return newPost;
+      } catch (error: any) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
+        // Handle database errors
+        if (error.code === "23505") { // Unique constraint violation
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "A post with this slug already exists",
+          });
+        }
+        
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to create post",
+        });
       }
-
-      return newPost;
     }),
 
   // Update post
   update: publicProcedure
     .input(
       z.object({
-        id: z.string(),
-        title: z.string().min(1).max(200).optional(),
-        slug: z.string().min(1).optional(),
-        content: z.string().min(1).optional(),
-        description: z.string().max(500).optional(),
-        imageUrl: z.string().url().optional().or(z.literal("")),
+        id: z.string().min(1, "Post ID is required"),
+        title: z.string().min(1, "Title is required").max(200, "Title is too long").optional(),
+        slug: z.string().min(1, "Slug is required").optional(),
+        content: z.string().min(1, "Content is required").optional(),
+        description: z.string().max(500, "Description is too long").optional(),
+        imageUrl: z.string().url("Invalid image URL").optional().or(z.literal("")),
         published: z.boolean().optional(),
         categoryIds: z.array(z.string()).optional(),
       })
@@ -130,62 +161,94 @@ export const postRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { id, categoryIds, ...updateData } = input;
 
-      // Update post
-      const [updatedPost] = await ctx.db
-        .update(posts)
-        .set({
-          ...updateData,
-          updatedAt: new Date(),
-        })
-        .where(eq(posts.id, id))
-        .returning();
+      try {
+        // Check if post exists
+        const existingPost = await ctx.db.query.posts.findFirst({
+          where: eq(posts.id, id),
+        });
 
-      if (!updatedPost) {
+        if (!existingPost) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Post not found",
+          });
+        }
+
+        // Update post
+        const [updatedPost] = await ctx.db
+          .update(posts)
+          .set({
+            ...updateData,
+            updatedAt: new Date(),
+          })
+          .where(eq(posts.id, id))
+          .returning();
+
+        // Update categories if provided
+        if (categoryIds) {
+          // Delete existing category relationships
+          await ctx.db.delete(postCategories).where(eq(postCategories.postId, id));
+
+          // Insert new category relationships
+          if (categoryIds.length > 0) {
+            await ctx.db.insert(postCategories).values(
+              categoryIds.map((categoryId) => ({
+                postId: id,
+                categoryId,
+              }))
+            );
+          }
+        }
+
+        return updatedPost;
+      } catch (error: any) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Post not found",
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to update post",
         });
       }
-
-      // Update categories if provided
-      if (categoryIds) {
-        // Delete existing category relationships
-        await ctx.db.delete(postCategories).where(eq(postCategories.postId, id));
-
-        // Insert new category relationships
-        if (categoryIds.length > 0) {
-          await ctx.db.insert(postCategories).values(
-            categoryIds.map((categoryId) => ({
-              postId: id,
-              categoryId,
-            }))
-          );
-        }
-      }
-
-      return updatedPost;
     }),
 
   // Delete post
   delete: publicProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string().min(1, "Post ID is required") }))
     .mutation(async ({ ctx, input }) => {
-      // Delete category relationships first
-      await ctx.db.delete(postCategories).where(eq(postCategories.postId, input.id));
+      try {
+        // Check if post exists
+        const existingPost = await ctx.db.query.posts.findFirst({
+          where: eq(posts.id, input.id),
+        });
 
-      // Delete post
-      const [deletedPost] = await ctx.db
-        .delete(posts)
-        .where(eq(posts.id, input.id))
-        .returning();
+        if (!existingPost) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Post not found",
+          });
+        }
 
-      if (!deletedPost) {
+        // Delete category relationships first (cascade)
+        await ctx.db.delete(postCategories).where(eq(postCategories.postId, input.id));
+
+        // Delete post
+        const [deletedPost] = await ctx.db
+          .delete(posts)
+          .where(eq(posts.id, input.id))
+          .returning();
+
+        return deletedPost;
+      } catch (error: any) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        
         throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Post not found",
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message || "Failed to delete post",
         });
       }
-
-      return deletedPost;
     }),
 });

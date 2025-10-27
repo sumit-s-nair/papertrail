@@ -26,16 +26,44 @@ export default function BlogPostPage({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-pulse space-y-3">
+            <div className="h-8 bg-muted rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-1/2 mx-auto"></div>
+          </div>
+          <p className="text-muted-foreground">Loading post...</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !post) {
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4 max-w-md">
+          <h1 className="text-2xl font-bold text-destructive">Error Loading Post</h1>
+          <p className="text-muted-foreground">
+            {error.message || "We couldn't load this post. It may have been removed or the URL is incorrect."}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Link href="/blog">
+              <Button>Back to Blog</Button>
+            </Link>
+            <Button variant="outline" onClick={() => router.refresh()}>
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!post) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-4">
-          <h1 className="text-2xl font-bold">Post not found</h1>
+          <h1 className="text-2xl font-bold">Post Not Found</h1>
+          <p className="text-muted-foreground">This post doesn't exist or has been removed.</p>
           <Link href="/blog">
             <Button>Back to Blog</Button>
           </Link>

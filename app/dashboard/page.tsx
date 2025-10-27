@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const user = useUser({ or: "redirect" });
   
   // Get only the current user's posts
-  const { data: postsData = [], isLoading } = trpc.post.getAll.useQuery({
+  const { data: postsData = [], isLoading, error } = trpc.post.getAll.useQuery({
     userId: user.id,
     publishedOnly: false,
   });
@@ -27,8 +27,14 @@ export default function DashboardPage() {
       toast.success("Post deleted successfully!");
       utils.post.getAll.invalidate();
     },
-    onError: () => {
-      toast.error("Failed to delete post. Please try again.");
+    onError: (error: any) => {
+      if (error.message?.includes("not found")) {
+        toast.error("Post not found. It may have already been deleted.");
+      } else if (error.message?.includes("Unauthorized")) {
+        toast.error("You are not authorized to delete this post.");
+      } else {
+        toast.error(error.message || "Failed to delete post. Please try again.");
+      }
     },
   });
 
@@ -61,7 +67,29 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Loading posts...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-pulse space-y-3">
+            <div className="h-8 bg-muted rounded w-48 mx-auto"></div>
+            <div className="h-4 bg-muted rounded w-32 mx-auto"></div>
+          </div>
+          <p className="text-muted-foreground">Loading your posts...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center space-y-4 max-w-md">
+          <h2 className="text-xl font-bold text-destructive">Error Loading Posts</h2>
+          <p className="text-muted-foreground">
+            {error.message || "We couldn't load your posts. Please try again."}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }

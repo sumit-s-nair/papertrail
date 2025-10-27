@@ -37,7 +37,19 @@ export default function NewPostPage() {
     },
     onError: (error: any) => {
       console.error("Failed to create post:", error);
-      toast.error("Failed to create post. Please try again.");
+      
+      // Provide specific error messages
+      if (error.message?.includes("slug")) {
+        toast.error("A post with a similar title already exists. Please try a different title.");
+      } else if (error.message?.includes("Unauthorized") || error.message?.includes("auth")) {
+        toast.error("You must be signed in to create a post.");
+      } else if (error.message?.includes("title")) {
+        toast.error("Invalid title. Please check your input.");
+      } else if (error.message?.includes("category")) {
+        toast.error("Invalid category selection. Please try again.");
+      } else {
+        toast.error(error.message || "Failed to create post. Please try again.");
+      }
     },
   });
 
@@ -50,13 +62,34 @@ export default function NewPostPage() {
   };
 
   const handleSave = async (shouldPublish: boolean) => {
+    // Validation
     if (!title.trim()) {
-      toast.error("Please enter a title");
+      toast.error("Title is required");
+      return;
+    }
+
+    if (title.length > 200) {
+      toast.error("Title is too long (max 200 characters)");
+      return;
+    }
+
+    if (description && description.length > 500) {
+      toast.error("Description is too long (max 500 characters)");
+      return;
+    }
+
+    if (imageUrl && !imageUrl.match(/^https?:\/\/.+/)) {
+      toast.error("Image URL must be a valid HTTP or HTTPS URL");
+      return;
+    }
+
+    if (selectedCategories.length === 0) {
+      toast.error("Please select at least one category");
       return;
     }
     
     if (!user) {
-      toast.error("You must be logged in to create a post");
+      toast.error("You must be signed in to create a post");
       return;
     }
 
