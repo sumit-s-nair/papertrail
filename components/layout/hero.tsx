@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+import { StatCounter } from "@/components/ui/stat-counter";
 
 export function Hero() {
+  const { data: stats } = trpc.stats.getStats.useQuery();
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20">
       {/* Background decoration */}
@@ -52,18 +56,18 @@ export function Hero() {
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 pt-12 max-w-2xl mx-auto">
-            <div className="space-y-1">
-              <p className="text-3xl md:text-4xl font-bold">500+</p>
-              <p className="text-sm text-muted-foreground">Articles</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-3xl md:text-4xl font-bold">50K+</p>
-              <p className="text-sm text-muted-foreground">Readers</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-3xl md:text-4xl font-bold">100+</p>
-              <p className="text-sm text-muted-foreground">Writers</p>
-            </div>
+            <StatCounter 
+              value={stats?.articles ?? 0} 
+              label="Articles" 
+            />
+            <StatCounter 
+              value={stats?.readers ?? 0} 
+              label="Readers" 
+            />
+            <StatCounter 
+              value={stats?.writers ?? 0} 
+              label="Writers" 
+            />
           </div>
         </div>
       </div>

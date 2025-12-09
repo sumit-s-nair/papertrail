@@ -82,8 +82,16 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
           <p>
-            © {new Date().getFullYear()} PaperTrail. Built with Next.js, tRPC,
-            and Drizzle ORM.
+            © {new Date().getFullYear()} PaperTrail. Designed by{" "}
+            <a
+              href="https://sumit-s-nair.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground hover:text-primary transition-colors font-medium"
+            >
+              Sumit Nair
+            </a>
+            .
           </p>
         </div>
       </div>
