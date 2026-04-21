@@ -10,6 +10,15 @@ import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { useUser } from "@stackframe/stack";
 import { toast } from "sonner";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,6 +29,8 @@ export default function DashboardPage() {
     userId: user.id,
     publishedOnly: false,
   });
+  
+  const { data: analytics } = trpc.post.getAnalytics.useQuery({ userId: user.id });
   
   const utils = trpc.useUtils();
   const deletePost = trpc.post.delete.useMutation({
@@ -144,6 +155,51 @@ export default function DashboardPage() {
           </CardHeader>
         </Card>
       </div>
+
+      {/* Analytics Chart */}
+      {analytics && analytics.timeline.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Views Overview (Last 30 Days)</CardTitle>
+            <CardDescription>{analytics.totalViews} total views across all posts</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] w-full pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.timeline}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                    }}
+                    tick={{ fontSize: 12 }}
+                    tickMargin={10}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }} 
+                    allowDecimals={false} 
+                    tickMargin={10}
+                  />
+                  <RechartsTooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--background))' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="views" 
+                    stroke="var(--primary)" 
+                    strokeWidth={3}
+                    dot={{ fill: "var(--primary)", strokeWidth: 2 }}
+                    activeDot={{ r: 6 }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Posts List */}
       <div className="space-y-4">

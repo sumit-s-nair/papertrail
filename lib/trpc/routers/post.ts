@@ -1,8 +1,14 @@
 import { router, publicProcedure } from "../server";
 import { z } from "zod";
-import { posts, postCategories, categories } from "@/lib/db/schema";
-import { eq, desc, and, like, inArray } from "drizzle-orm";
+import { posts, postCategories, categories, postViews } from "@/lib/db/schema";
+import { eq, desc, and, like, inArray, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
+
+function calculateReadTime(content: string): number {
+  if (!content) return 1;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / 200));
+}
 
 export const postRouter = router({
   // Get all posts with categories (optional userId filter for dashboard)
@@ -107,10 +113,13 @@ export const postRouter = router({
           });
         }
 
+        // Calculate reading time mathematically
+        const readTime = calculateReadTime(postData.content);
+
         // Insert post
         const [newPost] = await ctx.db
           .insert(posts)
-          .values(postData)
+          .values({ ...postData, readTime })
           .returning();
 
         // Link categories if provided
@@ -174,13 +183,19 @@ export const postRouter = router({
           });
         }
 
+        const updatePayload: any = {
+            ...updateData,
+            updatedAt: new Date(),
+        };
+
+        if (updateData.content !== undefined) {
+          updatePayload.readTime = calculateReadTime(updateData.content);
+        }
+
         // Update post
         const [updatedPost] = await ctx.db
           .update(posts)
-          .set({
-            ...updateData,
-            updatedAt: new Date(),
-          })
+          .set(updatePayload)
           .where(eq(posts.id, id))
           .returning();
 
@@ -250,5 +265,65 @@ export const postRouter = router({
           message: error.message || "Failed to delete post",
         });
       }
+    }),
+
+  // Analytics tracking views
+  addView: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const post = await ctx.db.query.posts.findFirst({
+        where: eq(posts.slug, input.slug),
+        columns: { id: true }
+      });
+      if (post) {
+        await ctx.db.insert(postViews).values({ postId: post.id });
+      }
+      return { success: true };
+    }),
+
+  // Get daily analytics for a user's posts
+  getAnalytics: publicProcedure
+    .input(z.object({ userId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      // Fetch all posts for this user along with their view timestamps
+      const userPosts = await ctx.db.query.posts.findMany({
+        where: eq(posts.authorId, input.userId),
+        with: {
+          postViews: {
+            columns: { viewedAt: true }
+          }
+        }
+      });
+
+      // Prepare an empty map for the last 30 days
+      const dailyCounts: Record<string, number> = {};
+      const last30Days = [...Array(30)].map((_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        return d.toISOString().split('T')[0];
+      }).reverse();
+
+      last30Days.forEach(day => { dailyCounts[day] = 0; });
+
+      let totalViews = 0;
+
+      // Group views by day natively to avoid raw complex SQL dialects
+      userPosts.forEach(post => {
+        post.postViews.forEach(view => {
+          totalViews++;
+          const day = new Date(view.viewedAt).toISOString().split('T')[0];
+          if (dailyCounts[day] !== undefined) {
+             dailyCounts[day]++;
+          }
+        });
+      });
+
+      return {
+        totalViews,
+        timeline: last30Days.map(date => ({
+          date,
+          views: dailyCounts[date]
+        }))
+      };
     }),
 });

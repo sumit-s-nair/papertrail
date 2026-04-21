@@ -35,9 +35,17 @@ export const postCategories = pgTable("post_categories", {
   categoryId: uuid("category_id").notNull().references(() => categories.id, { onDelete: "cascade" }),
 });
 
+// Analytics tracking
+export const postViews = pgTable("post_views", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  viewedAt: timestamp("viewed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Relations
 export const postsRelations = relations(posts, ({ many }) => ({
   postCategories: many(postCategories),
+  postViews: many(postViews),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -52,5 +60,12 @@ export const postCategoriesRelations = relations(postCategories, ({ one }) => ({
   category: one(categories, {
     fields: [postCategories.categoryId],
     references: [categories.id],
+  }),
+}));
+
+export const postViewsRelations = relations(postViews, ({ one }) => ({
+  post: one(posts, {
+    fields: [postViews.postId],
+    references: [posts.id],
   }),
 }));

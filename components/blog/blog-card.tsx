@@ -14,6 +14,7 @@ interface BlogCardProps {
     author: string;
     createdAt: Date;
     categories: string[];
+    readTime?: number | null;
   };
   featured?: boolean;
 }
@@ -66,9 +67,9 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
               <Calendar className="h-4 w-4" />
               <span>{new Date(post.createdAt).toLocaleDateString()}</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4" />
-              <span>5 min read</span>
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{post.readTime || 1} min read</span>
             </div>
           </div>
           <span className="font-medium text-foreground">{post.author}</span>

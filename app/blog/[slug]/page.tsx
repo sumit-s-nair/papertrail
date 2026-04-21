@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -22,6 +22,17 @@ export default function BlogPostPage({
   const router = useRouter();
 
   const { data: post, isLoading, error } = trpc.post.getBySlug.useQuery({ slug });
+  const addViewMutation = trpc.post.addView.useMutation();
+
+  useEffect(() => {
+    if (post?.slug) {
+      // 5 seconds dwell time counts as a "quality read / view"
+      const timer = setTimeout(() => {
+        addViewMutation.mutate({ slug: post.slug });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [post?.slug]);
 
   if (isLoading) {
     return (
@@ -152,7 +163,7 @@ export default function BlogPostPage({
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="h-4 w-4" />
-              <span>5 min read</span>
+              <span>{post.readTime || 1} min read</span>
             </div>
           </div>
 
