@@ -27,11 +27,11 @@ function LinkedinIcon({ className }: { className?: string }) {
 
 export function Footer() {
   return (
-    <footer className="border-t bg-muted/40">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12">
+    <footer className="border-t bg-muted/20 pb-8 pt-12 md:pt-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
+        <div className="flex flex-col items-center justify-center text-center gap-6 mb-12">
           {/* Brand */}
-          <div className="space-y-4">
+          <div className="space-y-4 max-w-md flex flex-col items-center mx-auto">
             <Link href="/" className="flex items-center space-x-2 group">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary group-hover:bg-primary/90 transition-colors">
                 <FileText className="h-5 w-5 text-primary-foreground" />
@@ -40,71 +40,21 @@ export function Footer() {
                 PaperTrail
               </span>
             </Link>
-            <p className="text-sm text-muted-foreground">
-              A modern blogging platform for sharing ideas, stories, and
-              insights with the world.
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              A modern platform for sharing insightful content. Write beautifully, read peacefully, and connect with your audience.
             </p>
-            <div className="flex space-x-4">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <GithubIcon className="h-5 w-5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <XIcon className="h-5 w-5" />
-              </a>
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <LinkedinIcon className="h-5 w-5" />
-              </a>
-            </div>
           </div>
 
-          {/* Product */}
-          <div>
-            <h3 className="font-semibold mb-4">Product</h3>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <Link
-                  href="/blog"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/dashboard"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Features
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {/* Links list */}
+          <ul className="flex flex-row items-center justify-center gap-6 sm:gap-8 pt-2 text-sm font-medium">
+            <li><Link href="/blog" className="text-muted-foreground hover:text-primary transition-colors">Explore</Link></li>
+            <li><Link href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">Write</Link></li>
+            <li><a href="https://github.com/sumit-s-nair/papertrail" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Open Source</a></li>
+          </ul>
         </div>
 
-        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
+        {/* Bottom Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t text-sm text-muted-foreground">
           <p>
             © {new Date().getFullYear()} PaperTrail. Designed by{" "}
             <a
@@ -117,6 +67,12 @@ export function Footer() {
             </a>
             .
           </p>
+          <div className="flex space-x-5">
+            <a href="https://github.com/sumit-s-nair/papertrail" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors group">
+              <span className="sr-only">GitHub</span>
+              <GithubIcon className="h-5 w-5 group-hover:scale-110 transition-transform" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>

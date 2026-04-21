@@ -176,14 +176,27 @@ export default function BlogPostPage({
               height={600}
               className="w-full h-auto"
               priority
-              unoptimized // Allow any external image source
+              unoptimized
             />
           </div>
         )}
 
         {/* Post Content */}
         <div className="prose prose-lg dark:prose-invert max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              img: ({node, ...props}) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img 
+                  {...props} 
+                  loading="lazy" 
+                  decoding="async" 
+                  className="rounded-lg shadow-md max-w-full h-auto mx-auto" 
+                />
+              )
+            }}
+          >
             {post.content}
           </ReactMarkdown>
         </div>

@@ -38,7 +38,7 @@ function BlogContent() {
     return posts.filter((post) => {
       const matchesCategory =
         selectedCategory === "All" ||
-        post.categories.includes(selectedCategory);
+        post.categories.some(c => c.toLowerCase() === selectedCategory.toLowerCase());
       const matchesSearch =
         searchQuery === "" ||
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
