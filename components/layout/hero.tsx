@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { StatCounter } from "@/components/ui/stat-counter";
+import { useUser } from "@stackframe/stack";
+import { useRouter } from "next/navigation";
 
 export function Hero() {
   const { data: stats } = trpc.stats.getStats.useQuery();
+  const user = useUser();
+  const router = useRouter();
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-background to-muted/20">
@@ -47,11 +51,17 @@ export function Hero() {
                 <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Link href="/dashboard">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto">
+            {user ? (
+              <Link href="/dashboard">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                  Start Writing
+                </Button>
+              </Link>
+            ) : (
+              <Button size="lg" variant="outline" className="w-full sm:w-auto" onClick={() => router.push('/handler/sign-in')}>
                 Start Writing
               </Button>
-            </Link>
+            )}
           </div>
 
           {/* Stats */}

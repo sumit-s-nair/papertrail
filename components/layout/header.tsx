@@ -5,9 +5,15 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { FileText, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useUser } from "@stackframe/stack";
+import { useRouter } from "next/navigation";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const user = useUser();
+  const router = useRouter();
+
+  const handleSignIn = () => router.push('/handler/sign-in');
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -41,9 +47,13 @@ export function Header() {
         {/* CTA Button */}
         <div className="hidden md:flex items-center space-x-3">
           <ThemeToggle />
-          <Link href="/dashboard">
-            <Button>Dashboard</Button>
-          </Link>
+          {user ? (
+            <Link href="/dashboard">
+              <Button>Dashboard</Button>
+            </Link>
+          ) : (
+            <Button onClick={handleSignIn}>Sign In</Button>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -86,9 +96,13 @@ export function Header() {
             </Link>
             <div className="flex items-center gap-2 pt-2">
               <ThemeToggle />
-              <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1">
-                <Button className="w-full">Dashboard</Button>
-              </Link>
+              {user ? (
+                <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex-1">
+                  <Button className="w-full">Dashboard</Button>
+                </Link>
+              ) : (
+                <Button className="flex-1" onClick={() => { setIsMenuOpen(false); handleSignIn(); }}>Sign In</Button>
+              )}
             </div>
           </nav>
         </div>
